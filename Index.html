@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MFX Homograph Scanner | Man Force X</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --neon:   #00ffe7;
+    --neon2:  #ff003c;
+    --neon3:  #ffe600;
+    --bg:     #050a0e;
+    --bg2:    #0a1520;
+    --card:   #0b1724;
+    --border: rgba(0,255,231,0.18);
+    --text:   #c8eaf5;
+    --dim:    #4a7a8a;
+    --safe:   #00ff88;
+    --danger: #ff003c;
+    --warn:   #ffe600;
+    --purple: #bf5fff;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Rajdhani', sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(0,255,231,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,231,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events:none; z-index:0;
+  }
+
+  body::after {
+    content:''; position:fixed; inset:0;
+    background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.05) 2px,rgba(0,0,0,0.05) 4px);
+    pointer-events:none; z-index:0;
+  }
+
+  .corner { position:fixed; width:60px; height:60px; z-index:10; }
+  .corner.tl { top:16px; left:16px; border-top:2px solid var(--neon); border-left:2px solid var(--neon); }
+  .corner.tr { top:16px; right:16px; border-top:2px solid var(--neon); border-right:2px solid var(--neon); }
+  .corner.bl { bottom:16px; left:16px; border-bottom:2px solid var(--neon); border-left:2px solid var(--neon); }
+  .corner.br { bottom:16px; right:16px; border-bottom:2px solid var(--neon); border-right:2px solid var(--neon); }
+
+  header {
+    position:relative; z-index:5; text-align:center;
+    padding: 44px 20px 28px; border-bottom: 1px solid var(--border);
+  }
+
+  .logo-hex {
+    width:64px; height:64px;
+    display:inline-flex; align-items:center; justify-content:center; font-size:28px;
+    clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+    background: linear-gradient(135deg,rgba(0,255,231,0.2),rgba(0,255,231,0.05));
+    filter: drop-shadow(0 0 14px var(--neon));
+    animation: hexPulse 3s ease-in-out infinite; margin-bottom: 14px;
+  }
+  @keyframes hexPulse {
+    0%,100% { filter: drop-shadow(0 0 10px var(--neon)); }
+    50%     { filter: drop-shadow(0 0 24px var(--neon)) drop-shadow(0 0 40px rgba(0,255,231,0.4)); }
+  }
+
+  h1 {
+    font-family:'Orbitron',monospace; font-size:clamp(18px,4vw,38px);
+    font-weight:900; letter-spacing:4px; color:#fff;
+    text-shadow:0 0 20px var(--neon),0 0 40px rgba(0,255,231,0.3);
+  }
+  .subtitle { font-family:'Share Tech Mono',monospace; font-size:12px; color:var(--neon); letter-spacing:3px; margin-top:5px; opacity:0.8; }
+  .badge {
+    display:inline-block; background:linear-gradient(135deg,rgba(0,255,231,0.1),rgba(0,255,231,0.05));
+    border:1px solid var(--border); color:var(--neon); font-family:'Share Tech Mono',monospace;
+    font-size:11px; letter-spacing:2px; padding:4px 14px; border-radius:2px; margin-top:10px;
+  }
+  .powered { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:12px; }
+  .powered-text { font-family:'Orbitron',monospace; font-size:11px; color:var(--neon2); letter-spacing:3px; text-shadow:0 0 10px var(--neon2); }
+
+  main { position:relative; z-index:5; max-width:860px; margin:0 auto; padding:30px 20px 80px; }
+
+  .info-box {
+    background:linear-gradient(135deg,rgba(0,255,231,0.05),rgba(0,255,231,0.02));
+    border:1px solid var(--border); border-left:3px solid var(--neon);
+    padding:16px 20px; margin-bottom:24px; border-radius:0 4px 4px 0;
+  }
+  .info-box h3 { font-family:'Orbitron',monospace; font-size:13px; color:var(--neon); letter-spacing:2px; margin-bottom:8px; }
+  .info-box p  { font-size:14px; color:var(--dim); line-height:1.7; }
+  .info-box .tags { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .tag { font-family:'Share Tech Mono',monospace; font-size:11px; padding:3px 10px; border:1px solid var(--border); color:var(--neon); border-radius:2px; background:rgba(0,255,231,0.05); }
+
+  .card {
+    background:var(--card); border:1px solid var(--border); border-radius:4px;
+    padding:28px; margin-bottom:20px; position:relative; overflow:hidden;
+  }
+  .card::before {
+    content:''; position:absolute; top:0;left:0;right:0; height:1px;
+    background:linear-gradient(90deg,transparent,var(--neon),transparent); opacity:0.4;
+  }
+  .card-title { font-family:'Orbitron',monospace; font-size:13px; color:var(--neon); letter-spacing:2px; margin-bottom:18px; display:flex; align-items:center; gap:10px; }
+  .card-title .icon { font-size:18px; }
+
+  .sec-title {
+    font-family:'Orbitron',monospace; font-size:11px; letter-spacing:4px; color:var(--dim);
+    text-transform:uppercase; margin-bottom:16px; padding-bottom:10px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:10px;
+  }
+  .sec-title::before { content:'//'; color:var(--neon); }
+
+  .input-group { display:flex; gap:10px; flex-wrap:wrap; }
+
+  input[type="text"] {
+    flex:1; min-width:200px; background:var(--bg2); border:1px solid var(--border);
+    color:#fff; font-family:'Share Tech Mono',monospace; font-size:14px;
+    padding:12px 16px; border-radius:2px; outline:none; transition:border-color 0.3s,box-shadow 0.3s;
+  }
+  input[type="text"]:focus { border-color:var(--neon); box-shadow:0 0 0 2px rgba(0,255,231,0.1); }
+  input::placeholder { color:var(--dim); }
+
+  .btn {
+    font-family:'Orbitron',monospace; font-size:12px; letter-spacing:2px; padding:12px 28px;
+    background:transparent; border:1px solid var(--neon); color:var(--neon); cursor:pointer;
+    transition:all 0.3s; clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);
+    text-shadow:0 0 8px var(--neon);
+  }
+  .btn:hover:not(:disabled) { background:var(--neon); color:#000; text-shadow:none; box-shadow:0 0 20px var(--neon); }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+  .loading { display:none; flex-direction:column; align-items:center; padding:40px; gap:20px; }
+  .loading.active { display:flex; }
+  .scanner-anim { width:80px; height:80px; position:relative; }
+  .scanner-ring { position:absolute; inset:0; border-radius:50%; border:2px solid transparent; animation:spin 1.5s linear infinite; }
+  .scanner-ring:nth-child(1) { border-top-color:var(--neon); animation-duration:1.2s; }
+  .scanner-ring:nth-child(2) { border-right-color:var(--neon2); inset:8px; animation-duration:0.8s; animation-direction:reverse; }
+  .scanner-ring:nth-child(3) { border-bottom-color:var(--neon3); inset:16px; animation-duration:2s; }
+  .scanner-dot { position:absolute; inset:28px; background:var(--neon); border-radius:50%; animation:pulse 1s ease-in-out infinite; }
+  @keyframes spin  { to { transform:rotate(360deg); } }
+  @keyframes pulse { 0%,100%{transform:scale(1);opacity:1;box-shadow:0 0 10px var(--neon);}50%{transform:scale(1.3);opacity:0.7;box-shadow:0 0 20px var(--neon),0 0 40px var(--neon);} }
+  .loading-text { font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--neon); letter-spacing:2px; animation:blink 1s step-end infinite; }
+  @keyframes blink { 50%{opacity:0.3;} }
+  .loading-bar-wrap { width:200px; height:2px; background:var(--bg2); border-radius:2px; overflow:hidden; }
+  .loading-bar { height:100%; background:linear-gradient(90deg,var(--neon),var(--neon2)); border-radius:2px; animation:loadbar 2s ease-in-out infinite; }
+  @keyframes loadbar { 0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%} }
+
+  .error-box {
+    display:none; background:rgba(255,0,60,0.08); border:1px solid rgba(255,0,60,0.3);
+    border-left:3px solid var(--neon2); padding:16px 20px; border-radius:0 4px 4px 0;
+    font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--neon2); margin-bottom:16px;
+  }
+  .error-box.active { display:block; }
+
+  .result-box { display:none; animation:fadeIn 0.5s ease; }
+  .result-box.active { display:block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+  .alert-banner { padding:20px 22px; border-radius:4px; margin-bottom:20px; font-size:15px; font-weight:600; line-height:1.7; border-left:4px solid; }
+  .alert-title  { font-family:'Orbitron',monospace; font-size:13px; letter-spacing:2px; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+  .alert-danger  { background:rgba(255,0,60,0.1); border-color:var(--danger); color:#ffb3c1; animation:dangerPulse 2s ease-in-out infinite; }
+  .alert-danger .alert-title { color:var(--danger); }
+  @keyframes dangerPulse { 0%,100%{box-shadow:inset 0 0 20px rgba(255,0,60,0.05)}50%{box-shadow:0 0 20px rgba(255,0,60,0.3),inset 0 0 30px rgba(255,0,60,0.1)} }
+  .alert-warning { background:rgba(255,230,0,0.08); border-color:var(--warn); color:#fff5b3; }
+  .alert-warning .alert-title { color:var(--warn); }
+  .alert-safe    { background:rgba(0,255,136,0.08); border-color:var(--safe); color:#b3ffe0; }
+  .alert-safe .alert-title { color:var(--safe); }
+
+  .risk-label { font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--dim); letter-spacing:2px; margin-bottom:8px; }
+  .risk-wrap  { display:flex; align-items:center; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
+  .risk-bar-bg   { flex:1; height:12px; background:var(--bg2); border-radius:99px; border:1px solid var(--border); overflow:hidden; min-width:150px; }
+  .risk-bar-fill { height:100%; border-radius:99px; transition:width 1s ease; }
+  .risk-score-num{ font-family:'Orbitron',monospace; font-size:36px; font-weight:900; line-height:1; }
+
+  .flags-wrap   { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
+  .flag-chip    { font-family:'Share Tech Mono',monospace; font-size:12px; padding:5px 14px; border-radius:2px; letter-spacing:1px; border:1px solid; font-weight:600; }
+  .flag-danger  { border-color:var(--danger); color:var(--danger); background:rgba(255,0,60,0.1); }
+  .flag-warn    { border-color:var(--warn);   color:var(--warn);   background:rgba(255,230,0,0.08); }
+  .flag-info    { border-color:var(--neon);   color:var(--neon);   background:rgba(0,255,231,0.07); }
+
+  .scripts-wrap { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+  .script-chip  { font-family:'Share Tech Mono',monospace; font-size:12px; padding:5px 14px; border-radius:2px; letter-spacing:1px; background:rgba(191,95,255,0.12); border:1px solid var(--purple); color:var(--purple); }
+
+  .meta-grid  { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-bottom:18px; }
+  .meta-item  { background:var(--bg2); border:1px solid var(--border); padding:10px 14px; border-radius:2px; }
+  .meta-label { font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--dim); letter-spacing:2px; margin-bottom:4px; }
+  .meta-val   { font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--neon); word-break:break-all; }
+
+  .char-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .char-table th { font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:2px; color:var(--dim); text-align:left; padding:8px 12px; border-bottom:1px solid var(--border); background:var(--bg); }
+  .char-table td { padding:9px 12px; border-bottom:1px solid rgba(255,255,255,0.04); font-family:'Share Tech Mono',monospace; }
+  .char-table tr:hover td { background:rgba(0,255,231,0.03); }
+  .char-spoof    { color:var(--danger); font-weight:bold; }
+  .char-cyrillic { color:var(--warn); }
+  .char-latin    { color:var(--text); }
+  .char-other    { color:var(--purple); }
+  .spoof-badge   { background:rgba(255,0,60,0.15); border:1px solid var(--danger); color:var(--danger); font-size:10px; padding:2px 7px; border-radius:2px; }
+
+  .char-scroll { max-height:280px; overflow-y:auto; border:1px solid var(--border); border-radius:2px; }
+  .char-scroll::-webkit-scrollbar { width:4px; }
+  .char-scroll::-webkit-scrollbar-track { background:var(--bg); }
+  .char-scroll::-webkit-scrollbar-thumb { background:var(--neon); border-radius:2px; }
+
+  .mt20 { margin-top:20px; }
+
+  footer { position:relative; z-index:5; text-align:center; padding:20px; border-top:1px solid var(--border); font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--dim); letter-spacing:2px; }
+  footer span { color:var(--neon2); }
+
+  @media(max-width:600px) { .input-group{flex-direction:column} .btn{width:100%} }
+</style>
+</head>
+<body>
+
+<div class="corner tl"></div>
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="corner br"></div>
+
+<header>
+  <div class="logo-hex">🔍</div>
+  <h1>MFX HOMOGRAPH SCANNER</h1>
+  <div class="subtitle">[ PENGESAN PAUTAN PALSU & SERANGAN AKSARA ]</div>
+  <div class="badge">⬡ HOMOGRAPH PHISHING DETECTION — RAPIDAPI ENGINE ⬡</div>
+  <div class="powered">
+    <span style="color:var(--neon2);font-size:16px">⚡</span>
+    <div class="powered-text">POWERED BY MAN FORCE X</div>
+  </div>
+</header>
+
+<main>
+
+  <div class="sec-title">Pengesan Serangan Homograph</div>
+
+  <div class="info-box">
+    <h3>⬡ APA ITU SERANGAN HOMOGRAPH?</h3>
+    <p>Penipu menggunakan aksara yang <strong style="color:var(--neon)">kelihatan sama</strong> tetapi berbeza sebenarnya — contoh huruf Latin <strong style="color:var(--warn)">'a'</strong> dan huruf Cyrillic <strong style="color:var(--danger)">'а'</strong> nampak sama tapi kod berbeza. Mereka cipta domain palsu seperti <strong style="color:var(--danger)">pаypаl.com</strong> untuk tipu mangsa.</p>
+    <div class="tags">
+      <span class="tag">HOMOGRAPH ATTACK</span>
+      <span class="tag">AKSARA CYRILLIC</span>
+      <span class="tag">VISUAL SPOOF</span>
+      <span class="tag">PHISHING DOMAIN</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">🌐</span> MASUKKAN DOMAIN / URL UNTUK DISEMAK</div>
+    <div class="input-group">
+      <input type="text" id="domain-input" placeholder="contoh: paypal.com atau https://example.com" />
+      <button class="btn" id="scan-btn" onclick="scanDomain()">SCAN SEKARANG</button>
+    </div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);margin-top:10px;">
+      ▸ Boleh masukkan domain sahaja atau URL penuh — sistem akan proses secara automatik
+    </div>
+  </div>
+
+  <div class="loading" id="scan-loading">
+    <div class="scanner-anim">
+      <div class="scanner-ring"></div><div class="scanner-ring"></div>
+      <div class="scanner-ring"></div><div class="scanner-dot"></div>
+    </div>
+    <div class="loading-text">MENGANALISIS AKSARA...</div>
+    <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
+  </div>
+
+  <div class="error-box" id="scan-error"></div>
+  <div class="result-box card" id="scan-result"></div>
+
+  <div class="card mt20">
+    <div class="card-title"><span class="icon">📖</span> CARA BACAAN KEPUTUSAN</div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--dim);line-height:2.2;">
+      <p>🟢 <strong style="color:var(--safe)">SELAMAT</strong> — Semua aksara tulen, tiada penipuan dikesan</p>
+      <p>🟡 <strong style="color:var(--warn)">MENCURIGAKAN</strong> — Ada aksara luar biasa, perlu berhati-hati</p>
+      <p>🔴 <strong style="color:var(--danger)">BERBAHAYA</strong> — Domain menggunakan aksara palsu untuk menipu</p>
+      <p style="margin-top:8px">⬡ <strong style="color:var(--purple)">CYRILLIC</strong> — Aksara dari bahasa Rusia/Slavik yang digunakan untuk tipu</p>
+      <p>⬡ <strong style="color:var(--neon)">VISUAL SPOOF</strong> — Aksara yang kelihatan sama dengan huruf lain</p>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  MFX HOMOGRAPH SCANNER &nbsp;|&nbsp; POWERED BY <span>MAN FORCE X</span> &nbsp;|&nbsp; ENGINE: RAPIDAPI
+</footer>
+
+<script>
+// ================================================================
+//  KONFIGURASI
+//  Untuk production (deploy): isi WORKER_URL dengan URL Cloudflare Worker
+//  Untuk preview/local: biarkan WORKER_URL kosong, guna direct API
+// ================================================================
+const WORKER_URL = ''; // contoh: 'restless-sunset-ed9a.mannforcex.workers.dev'
+const API_KEY    = '03f0d6b81fmsh03ec5b81392b7e3p18d176jsnf733182f0a2e';
+const API_HOST   = 'homograph-phising-scanner.p.rapidapi.com';
+
+// ================================================================
+
+function cleanDomain(input) {
+  try {
+    let s = input.trim().replace(/^\/\//, '');
+    if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
+    return new URL(s).hostname;
+  } catch {
+    return input.trim()
+      .replace(/^https?:\/\//i, '')
+      .replace(/^\/\//, '')
+      .split('/')[0].split('?')[0].trim();
+  }
+}
+
+function showLoading() {
+  document.getElementById('scan-loading').classList.add('active');
+  document.getElementById('scan-result').classList.remove('active');
+  document.getElementById('scan-error').classList.remove('active');
+  document.getElementById('scan-btn').disabled = true;
+}
+
+function hideLoading() {
+  document.getElementById('scan-loading').classList.remove('active');
+  document.getElementById('scan-btn').disabled = false;
+}
+
+function showError(msg) {
+  hideLoading();
+  const el = document.getElementById('scan-error');
+  el.textContent = '⚠ RALAT: ' + msg;
+  el.classList.add('active');
+}
+
+function showResult(html) {
+  hideLoading();
+  const el = document.getElementById('scan-result');
+  el.innerHTML = html;
+  el.classList.add('active');
+}
+
+async function scanDomain() {
+  const raw = document.getElementById('domain-input').value.trim();
+  if (!raw) { showError('Sila masukkan domain atau URL terlebih dahulu'); return; }
+
+  const domain = cleanDomain(raw);
+  if (!domain) { showError('Format domain tidak sah'); return; }
+
+  showLoading();
+
+  try {
+    let res;
+
+    if (WORKER_URL && WORKER_URL.length > 5) {
+      // Production — guna Cloudflare Worker (tiada CORS)
+      res = await fetch(WORKER_URL + '?text=' + encodeURIComponent(domain));
+    } else {
+      // Preview / local — guna direct RapidAPI
+      res = await fetch('https://' + API_HOST + '/?text=' + encodeURIComponent(domain), {
+        method: 'GET',
+        headers: {
+          'x-rapidapi-key':  API_KEY,
+          'x-rapidapi-host': API_HOST
+        }
+      });
+    }
+
+    if (!res.ok) {
+      let msg = 'HTTP ' + res.status;
+      try { const j = await res.json(); msg = j.message || j.error || msg; } catch {}
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    renderResult(data, domain);
+
+  } catch (e) {
+    const msg = e.message || '';
+    if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network') || msg.toLowerCase().includes('cors')) {
+      showError('CORS blocked — Website ini perlu Cloudflare Worker untuk berfungsi. Sila deploy worker.js dan isi WORKER_URL dalam kod.');
+    } else {
+      showError(msg);
+    }
+  }
+}
+
+// ===================== RENDER =====================
+
+function translateFlag(f) {
+  return { HOMOGRAPH_ATTACK:'🚨 SERANGAN HOMOGRAPH', MIXED_SCRIPTS:'⚠ AKSARA BERCAMPUR', CYRILLIC_DETECTED:'⚠ AKSARA CYRILLIC', VISUAL_SPOOF:'🚨 PENIPUAN VISUAL', IDN_DETECTED:'⚠ DOMAIN IDN', SUSPICIOUS_CHARACTERS:'⚠ AKSARA MENCURIGAKAN' }[f] || f;
+}
+
+function flagClass(f) {
+  if (f.includes('ATTACK') || f.includes('SPOOF')) return 'flag-danger';
+  if (f.includes('MIXED') || f.includes('CYRILLIC') || f.includes('SUSPICIOUS')) return 'flag-warn';
+  return 'flag-info';
+}
+
+function translateType(t) {
+  return { LATIN:'Latin', CYRILLIC:'⚠ Cyrillic', ARABIC:'Arab', GREEK:'Greek', OTHER:'Lain-lain' }[t] || t;
+}
+
+function typeClass(t) {
+  return t === 'CYRILLIC' ? 'char-cyrillic' : t === 'LATIN' ? 'char-latin' : 'char-other';
+}
+
+function renderResult(d, domain) {
+  const safe      = d.safe;
+  const verdict   = d.verdict || '';
+  const risk      = typeof d.risk_score === 'number' ? d.risk_score : (safe ? 0 : 100);
+  const flags     = d.flags || [];
+  const scripts   = d.scripts_detected || [];
+  const spoofs    = d.visual_spoofs_found || [];
+  const details   = d.details || [];
+  const inputText = d.input_text || domain;
+
+  const barColor   = risk >= 70 ? 'linear-gradient(90deg,#ff003c,#ff6b6b)' : risk >= 30 ? 'linear-gradient(90deg,#ffe600,#ffb347)' : 'linear-gradient(90deg,#00ff88,#00ffcc)';
+  const scoreColor = risk >= 70 ? 'var(--danger)' : risk >= 30 ? 'var(--warn)' : 'var(--safe)';
+
+  let alert = '';
+  if (!safe && risk >= 70) {
+    alert = `<div class="alert-banner alert-danger">
+      <div class="alert-title">🚨 AMARAN BAHAYA! DOMAIN PENIPUAN DIKESAN!</div>
+      Domain <strong>${inputText}</strong> menggunakan <strong>aksara palsu (homograph)</strong> untuk menyerupai domain sah.<br>
+      Ini teknik <strong>phishing berbahaya</strong> — aksara Cyrillic atau aksara lain digunakan untuk menipu mata anda.<br>
+      ⛔ <strong>JANGAN klik, login, atau buat sebarang transaksi</strong> di domain ini!
+    </div>`;
+  } else if (!safe || risk >= 30) {
+    alert = `<div class="alert-banner alert-warning">
+      <div class="alert-title">⚠️ MENCURIGAKAN — BERHATI-HATI</div>
+      Domain <strong>${inputText}</strong> menunjukkan beberapa ciri mencurigakan.<br>
+      ⚠️ Semak dengan teliti sebelum masukkan sebarang maklumat peribadi atau buat transaksi.
+    </div>`;
+  } else {
+    alert = `<div class="alert-banner alert-safe">
+      <div class="alert-title">✅ SELAMAT — TIADA PENIPUAN DIKESAN</div>
+      Domain <strong>${inputText}</strong> adalah <strong>SELAMAT</strong>.<br>
+      ✔️ Semua aksara tulen. Tiada serangan homograph atau penipuan visual dikesan.
+    </div>`;
+  }
+
+  const flagsHtml   = flags.length   ? `<div class="sec-title mt20">ANCAMAN DIKESAN</div><div class="flags-wrap">${flags.map(f=>`<span class="flag-chip ${flagClass(f)}">${translateFlag(f)}</span>`).join('')}</div>` : '';
+  const scriptsHtml = scripts.length ? `<div class="sec-title mt20">SKRIP AKSARA DIKESAN</div><div class="scripts-wrap">${scripts.map(s=>`<span class="script-chip">${s}</span>`).join('')}</div>` : '';
+  const spoofsHtml  = spoofs.length  ? `<div class="sec-title mt20">AKSARA VISUAL SPOOF</div><div class="flags-wrap">${spoofs.map(s=>`<span class="flag-chip flag-danger">🎭 ${s}</span>`).join('')}</div>` : '';
+
+  let tableHtml = '';
+  if (details.length) {
+    const rows = details.map(c => `<tr>
+      <td style="font-size:20px;text-align:center;letter-spacing:4px">${c.char}</td>
+      <td class="${c.is_visual_spoof ? 'char-spoof' : typeClass(c.type)}">${translateType(c.type)}</td>
+      <td style="color:var(--dim)">${c.hex || '-'}</td>
+      <td>${c.is_visual_spoof ? '<span class="spoof-badge">SPOOF</span>' : '<span style="color:var(--dim)">—</span>'}</td>
+    </tr>`).join('');
+    tableHtml = `<div class="sec-title mt20">ANALISIS SETIAP AKSARA</div>
+    <div class="char-scroll"><table class="char-table">
+      <thead><tr><th>AKSARA</th><th>JENIS</th><th>KOD HEX</th><th>STATUS</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+  }
+
+  showResult(`
+    ${alert}
+    <div class="meta-grid">
+      <div class="meta-item"><div class="meta-label">DOMAIN DISCAN</div><div class="meta-val">${inputText}</div></div>
+      <div class="meta-item"><div class="meta-label">KEPUTUSAN</div><div class="meta-val" style="color:${safe?'var(--safe)':'var(--danger)'}">${safe?'✔ SELAMAT':'⛔ '+verdict}</div></div>
+    </div>
+    <div class="risk-label">SKOR RISIKO</div>
+    <div class="risk-wrap">
+      <div class="risk-bar-bg"><div class="risk-bar-fill" style="width:${risk}%;background:${barColor}"></div></div>
+      <div class="risk-score-num" style="color:${scoreColor}">${risk}<span style="font-size:14px;color:var(--dim)">/100</span></div>
+    </div>
+    ${flagsHtml}${scriptsHtml}${spoofsHtml}${tableHtml}
+  `);
+}
+
+document.getElementById('domain-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') scanDomain();
+});
+</script>
+</body>
+</html>
